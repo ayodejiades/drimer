@@ -1,0 +1,51 @@
+graph TD
+    START([Tick: evaluateAndAct<br/>asset, duration]) --> GET_WINDOW["1. adapter.getCurrentWindow<br/>exchange timestamps<br/>retry 3×"]
+    GET_WINDOW --> IDEMPOTENCY{"2. Prediction exists<br/>for exchangeWindowId?"}
+    IDEMPOTENCY -- "YES → no-op" --> RETURN_EXISTS["return PREDICTION_EXISTS<br/>acted:false"]
+    IDEMPOTENCY -- "NO" --> ENSURE_WINDOW["3. saveWindow<br/>OPEN, LIVE"]
+    ENSURE_WINDOW --> GET_ODDS["4. adapter.getMarketOdds<br/>+ ledger recent settlements<br/>100 most recent"]
+    GET_ODDS --> COMPUTE_MODEL["5. computeModelProbability<br/>warm-started Beta-Binomial<br/>prior blends BACKTEST+LIVE<br/>+ spot-drift conditioning → pUp + 90% CI"]
+    COMPUTE_MODEL --> COMPUTE_EDGE["6. computeEdge<br/>modelPUp - marketPUp"]
+    COMPUTE_EDGE --> SAVE_PRED["7. savePrediction<br/>ALWAYS — traded or not<br/>for honest calibration"]
+    SAVE_PRED --> GET_RISKS["8. getRiskLimits<br/>fresh (no cache)"]
+    GET_RISKS --> CHECK_KILL{"killSwitch?"}
+    CHECK_KILL -- "YES" --> SKIP_KILL["SKIP KILL_SWITCH_ACTIVE"]
+    CHECK_KILL -- "NO" --> CHECK_N{"nObservations < 20?"}
+    CHECK_N -- "YES" --> SKIP_DATA["SKIP INSUFFICIENT_DATA"]
+    CHECK_N -- "NO" --> CHECK_CHOP{"isLowVolatilityChop?<br/>pUp within 1.5pp of 50/50<br/>+ spread ≤3%"}
+    CHECK_CHOP -- "YES" --> SKIP_CHOP["SKIP LOW_VOLATILITY_CHOP"]
+    CHECK_CHOP -- "NO" --> CHECK_SPREAD{"spread > 15%?"}
+    CHECK_SPREAD -- "YES" --> SKIP_SPREAD["SKIP EXCESSIVE_SPREAD"]
+    CHECK_SPREAD -- "NO" --> CHECK_EDGE{"|edge| < minEdge?"}
+    CHECK_EDGE -- "YES" --> SKIP_EDGE["SKIP EDGE_BELOW_THRESHOLD"]
+    CHECK_EDGE -- "NO" --> SIZE["sizePosition<br/>quarter-Kelly<br/>cap maxStakePerTrade"]
+    SIZE --> CHECK_DAILY{"dailyTotal + stake<br/>> maxDailyStake?"}
+    CHECK_DAILY -- "YES" --> SKIP_RISK["SKIP RISK_LIMIT_HIT"]
+    CHECK_DAILY -- "NO" --> CHECK_GAS{"getWalletBalanceStt<br/>< 0.005 STT?"}
+    CHECK_GAS -- "YES" --> SKIP_GAS["SKIP INSUFFICIENT_GAS"]
+    CHECK_GAS -- "NO" --> SAVE_DECISION["save Decision<br/>TRADE EDGE_CLEARED<br/>stake, kellyFraction"]
+    SAVE_DECISION --> PLACE_ORDER["adapter.placeOrder<br/>side = edge>0 ? UP:DOWN"]
+    PLACE_ORDER -- "immediately" --> SAVE_ORDER["saveOrder<br/>exchangeOrderId"]
+    SAVE_ORDER --> RETURN_TRADE["return TRADE<br/>acted:true"]
+    PLACE_ORDER -. "on error" .-> RETURN_TRADE_NO_ORDER["return TRADE<br/>no Order row<br/>reconcile in ingest"]
+
+    SKIP_KILL --> END([end])
+    SKIP_DATA --> END
+    SKIP_CHOP --> END
+    SKIP_SPREAD --> END
+    SKIP_EDGE --> END
+    SKIP_RISK --> END
+    SKIP_GAS --> END
+    RETURN_EXISTS --> END
+    RETURN_TRADE --> END
+    RETURN_TRADE_NO_ORDER --> END
+
+    classDef step fill:#fff,stroke:#000,stroke-width:3px,color:#000
+    classDef check fill:#FFE600,stroke:#000,stroke-width:3px,color:#000
+    classDef skip fill:#FF3B30,stroke:#000,stroke-width:3px,color:#000
+    classDef trade fill:#C6FF00,stroke:#000,stroke-width:3px,color:#000
+
+    class GET_WINDOW,ENSURE_WINDOW,GET_ODDS,COMPUTE_MODEL,COMPUTE_EDGE,SAVE_PRED,GET_RISKS,SIZE,SAVE_DECISION,PLACE_ORDER,SAVE_ORDER step
+    class IDEMPOTENCY,CHECK_KILL,CHECK_N,CHECK_CHOP,CHECK_SPREAD,CHECK_EDGE,CHECK_DAILY,CHECK_GAS check
+    class SKIP_KILL,SKIP_DATA,SKIP_CHOP,SKIP_SPREAD,SKIP_EDGE,SKIP_RISK,SKIP_GAS skip
+    class RETURN_TRADE trade

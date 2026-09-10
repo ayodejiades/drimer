@@ -1,0 +1,43 @@
+# Deny everything by default: only the paths explicitly whitelisted below are tracked.
+*
+
+# Directories needed for submission (must unignore the dir itself, then its contents)
+!/app/
+!/app/**
+!/src/
+!/src/**
+!/prisma/
+!/prisma/**
+!/public/
+!/public/**
+!/diagrams/
+!/diagrams/**
+!/docs/
+!/docs/**
+
+# Top-level files needed to build, run, and document the submission
+!/README.md
+!/LICENSE
+!/.env.example
+!/.gitignore
+!/package.json
+!/package-lock.json
+!/tsconfig.json
+!/tailwind.config.ts
+!/postcss.config.js
+!/vitest.config.ts
+!/next.config.mjs
+!/vercel.json
+!/railway.json
+!/next-env.d.ts
+
+# Explicitly re-deny anything that could sneak in as a false positive under an allowed dir
+.env
+.env.*
+!/.env.example
+node_modules/
+.next/
+*.log
+.DS_Store
+.vercel
+.env*

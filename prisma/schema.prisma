@@ -1,0 +1,135 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Asset {
+  BTC
+  ETH
+}
+
+enum Duration {
+  FIFTEEN_MIN
+  ONE_HOUR
+}
+
+enum WindowStatus {
+  OPEN
+  LOCKED
+  SETTLED
+  VOIDED
+  MISSED
+}
+
+enum DataSource {
+  LIVE
+  BACKTEST
+}
+
+enum Direction {
+  UP
+  DOWN
+}
+
+enum DecisionAction {
+  TRADE
+  SKIP
+}
+
+enum DecisionReason {
+  EDGE_CLEARED
+  EDGE_BELOW_THRESHOLD
+  INSUFFICIENT_DATA
+  RISK_LIMIT_HIT
+  KILL_SWITCH_ACTIVE
+  EXCESSIVE_SPREAD
+  LOW_VOLATILITY_CHOP
+  INSUFFICIENT_GAS
+}
+
+enum OrderStatus {
+  PLACED
+  FINALIZED_WIN
+  FINALIZED_LOSS
+  FAILED
+}
+
+model Window {
+  id               String       @id @default(cuid())
+  asset            Asset
+  duration         Duration
+  openTs           DateTime
+  closeTs          DateTime
+  exchangeWindowId String       @unique // SDK marketId (bytes32) — never key by poolAddress
+  oracleQuestionId String? // from market row; powers prd.oracle.somnia.host deep link
+  status           WindowStatus @default(OPEN)
+  source           DataSource   @default(LIVE)
+  createdAt        DateTime     @default(now())
+  prediction       Prediction?
+  settlement       Settlement?
+
+  @@index([asset, duration, openTs])
+  @@index([status])
+}
+
+model Prediction {
+  id             String   @id @default(cuid())
+  windowId       String   @unique
+  window         Window   @relation(fields: [windowId], references: [id])
+  modelPUp       Float
+  marketPUp      Float
+  edge           Float
+  confidenceLow  Float
+  confidenceHigh Float
+  modelVersion   String
+  nObservations  Int
+  createdAt      DateTime @default(now())
+  decision       Decision?
+}
+
+model Decision {
+  id            String         @id @default(cuid())
+  predictionId  String         @unique
+  prediction    Prediction     @relation(fields: [predictionId], references: [id])
+  action        DecisionAction
+  reason        DecisionReason
+  stake         Float?
+  kellyFraction Float?
+  createdAt     DateTime       @default(now())
+  order         Order?
+}
+
+model Order {
+  id              String      @id @default(cuid())
+  decisionId      String      @unique
+  decision        Decision    @relation(fields: [decisionId], references: [id])
+  exchangeOrderId String      @unique
+  side            Direction
+  stake           Float
+  status          OrderStatus @default(PLACED)
+  placedAt        DateTime    @default(now())
+  redeemed        Boolean     @default(false)
+  redeemedAt      DateTime?
+}
+
+model Settlement {
+  id        String     @id @default(cuid())
+  windowId  String     @unique
+  window    Window     @relation(fields: [windowId], references: [id])
+  outcome   Direction? // null when voided — both outcomes redeem at 0.5
+  voided    Boolean    @default(false)
+  settledAt DateTime   @default(now())
+}
+
+model RiskLimits {
+  id               Int      @id @default(1)
+  maxStakePerTrade Float    @default(5)
+  maxDailyStake    Float    @default(30)
+  minEdgeThreshold Float    @default(0.05)
+  killSwitch       Boolean  @default(false)
+  updatedAt        DateTime @updatedAt
+}

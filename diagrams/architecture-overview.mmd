@@ -1,0 +1,40 @@
+graph LR
+    subgraph LEDGER ["THE LEDGER — Postgres (single source of truth)"]
+        W[Window<br/>asset / duration / openTs / closeTs<br/>exchangeWindowId]
+        P[Prediction<br/>model_p_up / market_p_up / edge<br/>confidence / version / nObs]
+        D[Decision<br/>TRADE or SKIP<br/>reason enum]
+        O[Order<br/>exchangeOrderId / side / stake]
+        S[Settlement<br/>outcome UP/DOWN]
+        RL[RiskLimits<br/>maxStake / minEdge / killSwitch]
+        W --- P
+        P --- D
+        D --- O
+        W --- S
+    end
+
+    ADAPTER[Exchange Adapter<br/>only writer besides orchestrator<br/>DreamDEX Bot Kit client]
+    DECISION_LAYER[Decision Layer<br/>pure functions<br/>zero I/O]
+    ORCHESTRATOR[Orchestrator<br/>only side-effecting module<br/>evaluateAndAct]
+    INTERFACE_MCP[MCP Server<br/>5 tools incl. Calibration Oracle<br/>Streamable HTTP]
+    DASHBOARD[Dashboard<br/>neobrutalist<br/>max-720px]
+
+    ADAPTER -- "write Window/Settlement<br/>read market odds" --> LEDGER
+    DECISION_LAYER -- "reads ledger<br/>returns Prediction" --> LEDGER
+    ORCHESTRATOR -- "read/write<br/>Prediction/Decision/Order" --> LEDGER
+    INTERFACE_MCP -- "read-only<br/>+ place_trade" --> LEDGER
+    DASHBOARD -- "read-only<br/>same repository.ts" --> LEDGER
+
+    ORCHESTRATOR --- ADAPTER
+    ORCHESTRATOR --- DECISION_LAYER
+
+    classDef ledger fill:#FFE600,stroke:#000,stroke-width:3px,color:#000
+    classDef adapter fill:#fff,stroke:#000,stroke-width:3px,color:#000
+    classDef decision fill:#fff,stroke:#000,stroke-width:3px,color:#000
+    classDef orchestrator fill:#C6FF00,stroke:#000,stroke-width:3px,color:#000
+    classDef interface fill:#fff,stroke:#000,stroke-width:3px,color:#000
+
+    class W,P,D,O,S,RL ledger
+    class ADAPTER adapter
+    class DECISION_LAYER decision
+    class ORCHESTRATOR orchestrator
+    class INTERFACE_MCP,DASHBOARD interface

@@ -1,0 +1,35 @@
+graph LR
+    subgraph SOURCES ["Price Sources"]
+        CG[CoinGecko<br/>hourly<br/>BTC/ETH 90d]
+        SYNTH[Synthetic walk<br/>fallback<br/>seeded RNG]
+        CG --> FETCH[fetchHistoricalPrices]
+        SYNTH --> FETCH
+    end
+
+    FETCH --> BUILD["buildWindows<br/>align to 15-min boundaries<br/>interpolate price<br/>outcome = close>open ? UP:DOWN"]
+
+    BUILD --> SORT["sort by openTs<br/>strict time order"]
+
+    SORT --> WALK{"forward walk<br/>for each window N"}
+
+    WALK --> PRIOR["priorOutcomes =<br/>outcomes[0..N-1]<br/>NEVER N or later"]
+    PRIOR --> MODEL["computeModelProbability<br/>SAME function as live<br/>no separate backtest model"]
+    MODEL --> MARKET["mock marketPUp<br/>hash-based 0.45-0.55"]
+    MARKET --> EDGE["computeEdge"]
+    EDGE --> PRED_SAVE["save Window<br/>source=BACKTEST<br/>+ Prediction<br/>+ Decision (no Order)<br/>+ Settlement"]
+    PRED_SAVE --> REVEAL["reveal outcome N<br/>push to prior"]
+    REVEAL --> WALK
+
+    WALK --> CHART["ReliabilityChart<br/>deciles 0-1<br/>filled=live<br/>outlined=backtest<br/>dashed diagonal"]
+
+    WALK --> BRIER["Brier score<br/>mean (p - outcome)^2"]
+
+    classDef source fill:#fff,stroke:#000,stroke-width:3px,color:#000
+    classDef step fill:#FFE600,stroke:#000,stroke-width:3px,color:#000
+    classDef critical fill:#C6FF00,stroke:#000,stroke-width:3px,color:#000
+    classDef final fill:#fff,stroke:#000,stroke-width:3px,color:#000
+
+    class CG,SYNTH source
+    class FETCH,BUILD,SORT step
+    class PRIOR,MODEL critical
+    class CHART,BRIER final

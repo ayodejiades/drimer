@@ -1,0 +1,20 @@
+graph TD
+    Window["Window<br/>id (cuid) PK<br/>asset: BTC | ETH<br/>duration: FIFTEEN_MIN | ONE_HOUR<br/>openTs / closeTs (exchange timestamps)<br/>exchangeWindowId UNIQUE<br/>status: OPEN | SETTLED | MISSED<br/>source: LIVE | BACKTEST<br/>+ prediction 1:1<br/>+ settlement 1:1"]
+
+    Prediction["Prediction<br/>id PK<br/>windowId UNIQUE FK → Window<br/>modelPUp: 0..1<br/>marketPUp: 0..1<br/>edge: model - market<br/>confidenceLow / High (90% CI)<br/>modelVersion: string<br/>nObservations: int<br/>+ decision 1:1"]
+
+    Decision["Decision<br/>id PK<br/>predictionId UNIQUE FK<br/>action: TRADE | SKIP<br/>reason: EDGE_CLEARED | EDGE_BELOW_THRESHOLD<br/>| INSUFFICIENT_DATA | RISK_LIMIT_HIT | KILL_SWITCH_ACTIVE<br/>| EXCESSIVE_SPREAD | LOW_VOLATILITY_CHOP | INSUFFICIENT_GAS<br/>stake? / kellyFraction?<br/>+ order 1:1"]
+
+    Order["Order<br/>id PK<br/>decisionId UNIQUE FK<br/>exchangeOrderId UNIQUE<br/>side: UP | DOWN<br/>stake<br/>status: PLACED | SETTLED | FAILED"]
+
+    Settlement["Settlement<br/>id PK<br/>windowId UNIQUE FK → Window<br/>outcome: UP | DOWN<br/>settledAt"]
+
+    RiskLimits["RiskLimits<br/>id=1 SINGLETON<br/>maxStakePerTrade: 5<br/>maxDailyStake: 30<br/>minEdgeThreshold: 0.05<br/>killSwitch: bool<br/>updatedAt"]
+
+    Window -- "1:1" --> Prediction
+    Prediction -- "1:1" --> Decision
+    Decision -- "1:1" --> Order
+    Window -- "1:1" --> Settlement
+
+    classDef table fill:#fff,stroke:#000,stroke-width:3px,color:#000
+    class Window,Prediction,Decision,Order,Settlement,RiskLimits table

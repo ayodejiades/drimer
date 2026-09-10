@@ -1,0 +1,45 @@
+{
+  "baseUrl": "https://drimer-umber.vercel.app",
+  "viewport": { "width": 1440, "height": 900 },
+  "steps": [
+    {
+      "say": "Every DreamDEX bot bets without saying how confident it is. Drimer logs a probability on every window, whether it trades or not.",
+      "goto": "/",
+      "waitFor": "text=SIGNAL SANDBOX",
+      "waitMs": 27000
+    },
+    {
+      "say": "You can't tell if an edge is real, or just profit and loss noise, until you check it against reality.",
+      "waitMs": 6000
+    },
+    {
+      "say": "Drag the market odds up, and the Bayesian posterior recalculates right here in the browser.",
+      "fill": { "[data-demo=\"sandbox-market-odds\"]": "0.75" },
+      "waitMs": 6500
+    },
+    {
+      "say": "Add positive spot drift, and the edge widens. This is the exact math the orchestrator runs live every two minutes.",
+      "fill": { "[data-demo=\"sandbox-spot-drift\"]": "40" },
+      "waitMs": 9000
+    },
+    {
+      "say": "One click copies a real MCP call. Any other agent can ask Drimer to audit its own signal.",
+      "click": "[data-demo=\"sandbox-copy-mcp-call\"]",
+      "waitMs": 10500
+    },
+    {
+      "say": "This is not mock data. Drimer just placed and filled a real order on live Somnia Shannon testnet.",
+      "click": "text=MARKET VIEW",
+      "waitMs": 5500
+    },
+    {
+      "say": "Every prediction gets logged, so the reliability diagram can't be cherry-picked. The economic realization panel proves calibration pays, with realized return on investment, not just a claim.",
+      "click": "text=RELIABILITY DIAGRAM",
+      "waitMs": 9500
+    },
+    {
+      "say": "Drimer: the calibration layer for DreamDEX event contracts. Live now at drimer-umber.vercel.app.",
+      "waitMs": 7500
+    }
+  ]
+}
